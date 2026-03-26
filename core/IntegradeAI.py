@@ -29,6 +29,7 @@ class IntegradeAI:
             #adiciona oq eu disse ao historico
             self.messages.append({'role': 'user', 'content': usuary_text})
 
+            print(f"DEBUG HISTORICO COMPLETO: {self.messages}")  # <-- adiciona isso
             #envia a mensagem
             response = ollama.chat(model=self.model, messages=self.messages)
 
