@@ -17,6 +17,7 @@ from moderation import moderate_submission
 from rag import build_interview_prompt, build_rag_context_text
 import os, uuid, base64, subprocess
 from gtts import gTTS
+from fastapi import FastAPI, HTTPException, File, UploadFile, Query, Request
 
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")

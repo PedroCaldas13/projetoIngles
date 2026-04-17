@@ -18,11 +18,30 @@
   --font-body:  'DM Sans', sans-serif;
 }
 
-html, body, #root { height: 100%; background: var(--bg); color: var(--text); font-family: var(--font-body); font-size: 15px; line-height: 1.6; -webkit-font-smoothing: antialiased; }
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
 
-/* ── Root & blobs ── */
-.app-root { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; position: relative; overflow: hidden; }
-
+.app-root {
+  width: 100%;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  position: relative;
+  overflow: hidden; /* mantém para os blobs não causarem scroll */
+  background: var(--bg);
+}
 .bg-blob { position: fixed; border-radius: 50%; filter: blur(90px); opacity: 0.14; pointer-events: none; z-index: 0; }
 .blob-1 { width: 520px; height: 520px; background: radial-gradient(circle, #00e5a0, transparent 70%); top: -140px; left: -120px; animation: drift 14s ease-in-out infinite alternate; }
 .blob-2 { width: 420px; height: 420px; background: radial-gradient(circle, #0099ff, transparent 70%); bottom: -120px; right: -100px; animation: drift 18s ease-in-out infinite alternate-reverse; }
@@ -30,9 +49,11 @@ html, body, #root { height: 100%; background: var(--bg); color: var(--text); fon
 
 /* ── App shell (sidebar + main) ── */
 .app-shell {
-  position: relative; z-index: 1;
-  width: 960px; max-width: 100%;
-  height: 90vh; max-height: 860px;
+  position: relative;
+  z-index: 1;
+  width: calc(100vw - 48px);  /* quase toda a largura */
+  max-width: 1400px;           /* limite para telas muito grandes */
+  height: calc(100vh - 48px);
   display: flex;
   background: var(--surface);
   border: 1px solid var(--border);
@@ -40,7 +61,6 @@ html, body, #root { height: 100%; background: var(--bg); color: var(--text); fon
   overflow: hidden;
   box-shadow: 0 0 0 1px rgba(0,229,160,0.04), 0 32px 80px rgba(0,0,0,0.65);
 }
-
 /* ══════════════════════════════════════
    SIDEBAR
 ══════════════════════════════════════ */
@@ -284,6 +304,11 @@ html, body, #root { height: 100%; background: var(--bg); color: var(--text); fon
 .diff-easy     { background: rgba(0,229,160,0.1); color: var(--accent); }
 .diff-medium   { background: rgba(245,158,11,0.1); color: #fbbf24; }
 .diff-hard     { background: rgba(255,77,109,0.1); color: #fb7185; }
+.stage-block {
+  display: flex; flex-direction: column; gap: 14px;
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 14px; padding: 16px;
+}
 
 .question-list { display: flex; flex-direction: column; gap: 8px; list-style: none; padding: 0; margin: 0; }
 .question-item { display: flex; gap: 10px; align-items: flex-start; font-size: 13.5px; line-height: 1.5; color: var(--text); }
@@ -294,7 +319,7 @@ html, body, #root { height: 100%; background: var(--bg); color: var(--text); fon
 .submit-btn:hover { background: rgba(0,229,160,0.18); }
 
 /* Submit form */
-.submit-form { display: flex; flex-direction: column; gap: 20px; }
+.submit-form { display: flex; flex-direction: co/inilumn; gap: 20px; }
 .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 .form-group { display: flex; flex-direction: column; gap: 7px; }
 .form-label { font-size: 12px; font-weight: 600; color: var(--text-muted); letter-spacing: 0.4px; text-transform: uppercase; }

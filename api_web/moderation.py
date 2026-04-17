@@ -38,10 +38,6 @@ Questions:
 
 
 def moderate_submission(company: str, role: str, stage: str, questions: list[str]) -> dict:
-    """
-    Usa o DeepSeek local para moderar uma submissão.
-    Retorna dict com: approved (bool), reason (str), cleaned_questions (list)
-    """
     prompt = MODERATION_PROMPT.format(
         company=company,
         role=role,
@@ -55,21 +51,26 @@ def moderate_submission(company: str, role: str, stage: str, questions: list[str
             messages=[{"role": "user", "content": prompt}]
         )
         raw = response.message.content
+        print(f"DEBUG moderação raw: {raw}")  # <-- veja o que está saindo
 
         # Remove tags <think> do DeepSeek
         raw = re.sub(r'<think>.*?</think>', '', raw, flags=re.DOTALL).strip()
 
-        # Remove markdown fences se houver
-        raw = re.sub(r'```json|```', '', raw).strip()
+        # Extrai só o bloco JSON — pega o primeiro { ... } encontrado
+        match = re.search(r'\{.*\}', raw, flags=re.DOTALL)
+        if not match:
+            print("⚠️ Nenhum JSON encontrado, aprovando.")
+            return {"approved": True, "reason": "", "cleaned_questions": questions}
 
-        result = json.loads(raw)
+        json_str = match.group(0)
+        result = json.loads(json_str)
         print(f"DEBUG moderação: approved={result.get('approved')}, reason={result.get('reason')}")
         return result
 
     except json.JSONDecodeError as e:
-        print(f"⚠️ Moderação: falha ao parsear JSON — {e}. Aprovando com cautela.")
+        print(f"⚠️ JSON inválido: {e}. Aprovando.")
         return {"approved": True, "reason": "", "cleaned_questions": questions}
 
     except Exception as e:
-        print(f"⚠️ Moderação: erro inesperado — {e}. Aprovando com cautela.")
+        print(f"⚠️ Erro inesperado: {e}. Aprovando.")
         return {"approved": True, "reason": "", "cleaned_questions": questions}

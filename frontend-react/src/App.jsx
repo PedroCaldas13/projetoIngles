@@ -491,7 +491,7 @@ function InterviewMode({ audio }) {
 // COMMUNITY MODE
 // ══════════════════════════════════════════════════════════════════════════════
 function CommunityMode() {
-  const [view, setView] = useState("browse");        // "browse" | "detail" | "submit"
+  const [view, setView] = useState("browse");
   const [companies, setCompanies] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedCompany, setSelectedCompany] = useState(null);
@@ -499,14 +499,19 @@ function CommunityMode() {
   const [interviews, setInterviews] = useState([]);
   const [isLoadingInterviews, setIsLoadingInterviews] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-
-  // Submit form state
-  const [form, setForm] = useState({
-    company: "", role: "", stage: "Technical", difficulty: "Medium",
-    questions: ["", "", ""], submitted_by: "anonymous",
-  });
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitResult, setSubmitResult] = useState(null); // { status, message }
+  const [submitResult, setSubmitResult] = useState(null);
+
+  // ── Novo formato que bate com InterviewSubmit do backend ──
+  const [form, setForm] = useState({
+    company_name: "",
+    role: "",
+    difficulty: "Medium",
+    submitted_by: "anonymous",
+    stages: [
+      { stage_type: "Technical", description: "", questions: ["", "", ""] }
+    ],
+  });
 
   // Load companies on mount
   useEffect(() => {
@@ -528,27 +533,53 @@ function CommunityMode() {
     finally { setIsLoadingInterviews(false); }
   };
 
+  // ── Stage helpers ──
+  const updateStageField = (si, field, val) =>
+    setForm(f => { const s = [...f.stages]; s[si] = { ...s[si], [field]: val }; return { ...f, stages: s }; });
+
+  const updateQuestion = (si, qi, val) =>
+    setForm(f => { const s = [...f.stages]; s[si].questions[qi] = val; return { ...f, stages: s }; });
+
+  const addQuestion = (si) =>
+    setForm(f => { const s = [...f.stages]; s[si].questions.push(""); return { ...f, stages: s }; });
+
+  const removeQuestion = (si, qi) =>
+    setForm(f => { const s = [...f.stages]; s[si].questions = s[si].questions.filter((_, i) => i !== qi); return { ...f, stages: s }; });
+
+  // ── Submit ──
   const handleSubmit = async () => {
-    const cleanQuestions = form.questions.filter(q => q.trim().length > 5);
-    if (!form.company || !form.role || cleanQuestions.length === 0) return;
+    const payload = {
+      ...form,
+      company_name: form.company_name.trim(),
+      role: form.role.trim(),
+      stages: form.stages.map(s => ({
+        ...s,
+        questions: s.questions.filter(q => q.trim().length > 5)
+      })).filter(s => s.questions.length > 0)
+    };
+
+    if (!payload.company_name || !payload.role || payload.stages.length === 0) return;
+
     setIsSubmitting(true); setSubmitResult(null);
     try {
       const res = await fetch(`${API}/submit-interview`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, questions: cleanQuestions }),
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
       setSubmitResult(data);
       if (data.status === "approved") {
-        setForm({ company: "", role: "", stage: "Technical", difficulty: "Medium", questions: ["", "", ""], submitted_by: "anonymous" });
+        setForm({
+          company_name: "", role: "", difficulty: "Medium", submitted_by: "anonymous",
+          stages: [{ stage_type: "Technical", description: "", questions: ["", "", ""] }]
+        });
       }
-    } catch (err) { console.error(err); setSubmitResult({ status: "error", message: "Connection error." }); }
-    finally { setIsSubmitting(false); }
+    } catch (err) {
+      console.error(err);
+      setSubmitResult({ status: "error", message: "Connection error." });
+    } finally { setIsSubmitting(false); }
   };
-
-  const addQuestion = () => setForm(f => ({ ...f, questions: [...f.questions, ""] }));
-  const updateQuestion = (i, val) => setForm(f => { const q = [...f.questions]; q[i] = val; return { ...f, questions: q }; });
-  const removeQuestion = (i) => setForm(f => ({ ...f, questions: f.questions.filter((_, idx) => idx !== i) }));
 
   const filteredCompanies = companies.filter(c =>
     c.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -570,9 +601,7 @@ function CommunityMode() {
           Contribute
         </button>
       </div>
-
       <div className="community-body">
-        {/* Search */}
         <div className="search-box">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
           <input className="search-input" placeholder="Search company…" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
@@ -701,65 +730,74 @@ function CommunityMode() {
           </div>
         ) : (
           <div className="submit-form">
+
             {/* Company + Role */}
             <div className="form-row">
               <div className="form-group">
                 <label className="form-label">Company *</label>
-                <input className="form-input" placeholder="e.g. Google" value={form.company} onChange={e => setForm(f => ({ ...f, company: e.target.value }))} />
+                <input className="form-input" placeholder="e.g. Google"
+                  value={form.company_name} onChange={e => setForm(f => ({ ...f, company_name: e.target.value }))} />
               </div>
               <div className="form-group">
                 <label className="form-label">Role *</label>
-                <input className="form-input" placeholder="e.g. Software Engineer" value={form.role} onChange={e => setForm(f => ({ ...f, role: e.target.value }))} />
+                <input className="form-input" placeholder="e.g. Software Engineer"
+                  value={form.role} onChange={e => setForm(f => ({ ...f, role: e.target.value }))} />
               </div>
             </div>
 
-            {/* Stage + Difficulty */}
-            <div className="form-row">
-              <div className="form-group">
-                <label className="form-label">Interview Stage</label>
-                <div className="pill-group">
-                  {STAGES.map(s => (
-                    <button key={s} className={`pill ${form.stage === s ? "pill-active" : ""}`} onClick={() => setForm(f => ({ ...f, stage: s }))}>{s}</button>
-                  ))}
-                </div>
-              </div>
-              <div className="form-group">
-                <label className="form-label">Difficulty</label>
-                <div className="pill-group">
-                  {DIFFICULTIES.map(d => (
-                    <button key={d} className={`pill ${form.difficulty === d ? "pill-active" : ""}`} onClick={() => setForm(f => ({ ...f, difficulty: d }))}>{d}</button>
-                  ))}
-                </div>
+            {/* Difficulty */}
+            <div className="form-group">
+              <label className="form-label">Overall Difficulty</label>
+              <div className="pill-group">
+                {DIFFICULTIES.map(d => (
+                  <button key={d} className={`pill ${form.difficulty === d ? "pill-active" : ""}`}
+                    onClick={() => setForm(f => ({ ...f, difficulty: d }))}>{d}</button>
+                ))}
               </div>
             </div>
+
+            {/* Stage block */}
+            {form.stages.map((stage, si) => (
+              <div key={si} className="stage-block">
+                <div className="form-group">
+                  <label className="form-label">Interview Stage</label>
+                  <div className="pill-group">
+                    {STAGES.map(s => (
+                      <button key={s} className={`pill ${stage.stage_type === s ? "pill-active" : ""}`}
+                        onClick={() => updateStageField(si, "stage_type", s)}>{s}</button>
+                    ))}
+                  </div>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Questions * <span style={{ color: "var(--text-muted)", fontWeight: 400 }}>(at least 1)</span></label>
+                  {stage.questions.map((q, qi) => (
+                    <div key={qi} className="question-input-row">
+                      <span className="question-input-num">{qi + 1}</span>
+                      <input className="form-input" placeholder={`Question ${qi + 1}…`}
+                        value={q} onChange={e => updateQuestion(si, qi, e.target.value)} />
+                      {stage.questions.length > 1 && (
+                        <button className="question-remove" onClick={() => removeQuestion(si, qi)}>×</button>
+                      )}
+                    </div>
+                  ))}
+                  <button className="add-question-btn" onClick={() => addQuestion(si)}>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    Add question
+                  </button>
+                </div>
+              </div>
+            ))}
 
             {/* Your name */}
             <div className="form-group">
               <label className="form-label">Your name (optional)</label>
-              <input className="form-input" placeholder="anonymous" value={form.submitted_by} onChange={e => setForm(f => ({ ...f, submitted_by: e.target.value || "anonymous" }))} />
-            </div>
-
-            {/* Questions */}
-            <div className="form-group">
-              <label className="form-label">Questions you were asked * <span style={{ color: "var(--text-muted)", fontWeight: 400 }}>(at least 1)</span></label>
-              {form.questions.map((q, i) => (
-                <div key={i} className="question-input-row">
-                  <span className="question-input-num">{i + 1}</span>
-                  <input className="form-input" placeholder={`Question ${i + 1}…`} value={q} onChange={e => updateQuestion(i, e.target.value)} />
-                  {form.questions.length > 1 && (
-                    <button className="question-remove" onClick={() => removeQuestion(i)}>×</button>
-                  )}
-                </div>
-              ))}
-              <button className="add-question-btn" onClick={addQuestion}>
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                Add question
-              </button>
+              <input className="form-input" placeholder="anonymous"
+                value={form.submitted_by} onChange={e => setForm(f => ({ ...f, submitted_by: e.target.value || "anonymous" }))} />
             </div>
 
             <button className="start-btn"
               onClick={handleSubmit}
-              disabled={isSubmitting || !form.company || !form.role || form.questions.every(q => q.trim().length < 5)}>
+              disabled={isSubmitting || !form.company_name || !form.role || form.stages.every(s => s.questions.every(q => q.trim().length < 5))}>
               {isSubmitting
                 ? <><span className="btn-spinner" /> Reviewing with AI…</>
                 : <><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="22 2 15 22 11 13 2 9 22 2"/></svg> Submit for Review</>
